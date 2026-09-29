@@ -109,7 +109,7 @@ textarea{min-height:90px;resize:vertical;margin-top:8px}
 <script>
 const ID="2PACX-1vSuQAgwKK9aVWOAAd6rjPHwVU773qV1u8PsJ7wiWFUfjxJScDjrCWjPcEuGlHiJn_2qx9GNS4tbdZk6",GID="1576954077",EVERY=20000;
 const CSV=`https://docs.google.com/spreadsheets/d/e/${ID}/pub?gid=${GID}&single=true&output=csv`;
-const SNAP="Sr No.,Batch No,Candidate Name,Contact number,Education,Total Experience,Current/Last organisation,Current/ Last designation,Current Salary,Benefits, Expected salary ,Interview Time\n1.0,1,Muhammad Usman,0301 2381969,Chemical Engineering,6 months,Trainee,Tandianwala Sugar mills,_,_,_,12:00\n2,1,Hamza Rafique,0302 0174434,Chemical Engineering,1 month,Fatima Fertilizer,Production Analyst,_,_,_,12:30\n3,1,Muneer Ahmed,0307 1600928,Chemical Engineering,1 month,Sui Nothern,_,_,_,_,1:00pm\n4,1,Talal Akram,0301 1907187,Chemical Engineering,1 month,_,_,_,_,_,11:00 PM\n5,1,Ahmer Hussain,0301 3015549,Chemical Engineering,1 month,_,_,_,_,_,11:30 PM\n6,1,Muhammad Zaid,0309 7969458,Chemical Engineering,1 month,Aramco,_,_,_,_,12:15 PM";
+const SNAP="Sr No.,Batch No,Candidate Name,Contact number,Education,Total Experience,Current/Last organisation,Current/ Last designation,Current Salary,Benefits, Expected salary ,Interview Time,Status\n1.0,1,Muhammad Usman,0301 2381969,Chemical Engineering,6 months,Trainee,Tandianwala Sugar mills,_,_,_,12:00,Hold\n2,1,Hamza Rafique,0302 0174434,Chemical Engineering,1 month,Fatima Fertilizer,Production Analyst,_,_,_,12:30,Hired\n3,1,Muneer Ahmed,0307 1600928,Chemical Engineering,1 month,Sui Nothern,_,_,_,_,1:00pm,Shortlisted\n4,1,Talal Akram,0301 1907187,Chemical Engineering,1 month,_,_,_,_,_,11:00 PM,rejected\n5,1,Ahmer Hussain,0301 3015549,Chemical Engineering,1 month,_,_,_,_,_,11:30 PM,\n6,1,Muhammad Zaid,0309 7969458,Chemical Engineering,1 month,Aramco,_,_,_,_,12:15 PM,";
 const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 const ST=["New","Shortlisted","Hold","Rejected","Hired"],SC={New:"#6366f1",Shortlisted:"#10b981",Hold:"#f59e0b",Rejected:"#ef4444",Hired:"#0ea5e9"};
 const AVC=["#6366f1,#8b5cf6","#0ea5e9,#14b8a6","#ec4899,#f97316","#10b981,#0ea5e9","#f59e0b,#ef4444","#8b5cf6,#ec4899"];
@@ -117,7 +117,7 @@ const mk=()=>({q:"",batch:new Set,edu:new Set,exp:new Set,slot:new Set,st:new Se
 let cols=[],rows=[],D={},last="",src="",view="cards",sortBy="sr",S=mk(),store={};
 try{store=JSON.parse(localStorage.getItem("rh")||"{}")}catch(e){}
 const save=()=>{try{localStorage.setItem("rh",JSON.stringify(store))}catch(e){}};
-const stOf=o=>(store[o._k]||{}).s||"New";
+const stOf=o=>{if(D.status){const v=(o[D.status]||"").toLowerCase().replace(/[^a-z]/g,"");return ST.find(s=>s.toLowerCase()===v)||ST.find(s=>v&&s.toLowerCase().startsWith(v))||"New"}return(store[o._k]||{}).s||"New"};
 
 function parseCSV(t){const r=[];let row=[],f="",q=false;
 for(let i=0;i<t.length;i++){const c=t[i];
@@ -151,7 +151,7 @@ function ingest(txt){
  const idx=[];p[0].forEach((c,i)=>{if(c.trim())idx.push(i)});
  cols=idx.map(i=>p[0][i].trim());
  const f=re=>cols.find(c=>re.test(c));
- D={sr:f(/^sr/i),batch:f(/batch/i),name:cols.find(c=>/name/i.test(c)&&!/organi|design/i.test(c))||cols[0],tel:f(/contact|phone|mobile/i),edu:f(/educ|qualif/i),exp:f(/experience/i),org:f(/organi[sz]ation|company/i),des:f(/designation|position/i),cur:f(/current.*salary/i),ben:f(/benefit/i),exs:f(/expected/i),int:f(/interview/i)};
+ D={sr:f(/^sr/i),batch:f(/batch/i),name:cols.find(c=>/name/i.test(c)&&!/organi|design/i.test(c))||cols[0],tel:f(/contact|phone|mobile/i),edu:f(/educ|qualif/i),exp:f(/experience/i),org:f(/organi[sz]ation|company/i),des:f(/designation|position/i),cur:f(/current.*salary/i),ben:f(/benefit/i),exs:f(/expected/i),int:f(/interview/i),status:f(/status|stage/i)};
  rows=p.slice(1).map((r,n)=>{const o={};idx.forEach((i,j)=>o[cols[j]]=clean(r[i]));
   o._i=n;o._exp=D.exp?num(o[D.exp],1):NaN;o._cur=D.cur?num(o[D.cur]):NaN;o._exs=D.exs?num(o[D.exs]):NaN;
   o._t=D.int?tmin(o[D.int]):NaN;o._k=(g(o,D.tel).replace(/\s/g,"")||g(o,D.name)).toLowerCase();
@@ -178,8 +178,8 @@ function buildSide(){
  if(D.edu)G.push(["Education","edu",cnt(o=>g(o,D.edu)).sort((a,b)=>b[1]-a[1]),v=>v]);
  if(D.exp)G.push(["Experience","exp",["Unknown","Under 1 yr","1–3 yrs","3–5 yrs","5+ yrs"].map(b=>[b,rows.filter(o=>bk(o)===b).length]).filter(x=>x[1]),v=>v]);
  if(D.int)G.push(["Interview slot","slot",cnt(sk).sort((a,b)=>a[0]==="none"?1:b[0]==="none"?-1:a[0]-b[0]),v=>v==="none"?"Unscheduled":ft(v*60).replace(":00","")]);
- G.push(["Status","st",ST.map(s=>[s,0]),v=>v]);
- let h=G.map(([t,k,arr,lab])=>`<h4>${t}</h4><div class="chips">${arr.map(([v,n])=>`<button class="chip ${S[k].has(String(v))?"on":""}" data-g="${k}" data-v="${esc(v)}">${esc(lab(v))}${k==="st"?"":`<i>${n}</i>`}</button>`).join("")}</div>`).join("");
+ G.push(["Status","st",ST.map(s=>[s,rows.filter(o=>stOf(o)===s).length]),v=>v]);
+ let h=G.map(([t,k,arr,lab])=>`<h4>${t}</h4><div class="chips">${arr.map(([v,n])=>`<button class="chip ${S[k].has(String(v))?"on":""}" data-g="${k}" data-v="${esc(v)}">${esc(lab(v))}<i>${n}</i></button>`).join("")}</div>`).join("");
  if(rows.some(o=>!isNaN(o._exs)))h+=`<h4>Expected salary</h4><div class="rg"><input type="number" id="smin" placeholder="Min" value="${S.smin}"><input type="number" id="smax" placeholder="Max" value="${S.smax}"></div>`;
  h+=`<label class="tg"><input type="checkbox" id="org" ${S.org?"checked":""}> Only with company info</label><button class="btn" id="rs" style="margin-top:16px;width:100%">Reset filters</button>`;
  $("#side").innerHTML=h;
@@ -212,7 +212,7 @@ function filtered(){
 const ini=n=>n.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
 const av=n=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%AVC.length;return`background:linear-gradient(135deg,${AVC[h]})`};
 const sp=s=>`<span class="sp" style="color:${SC[s]};background:${SC[s]}22">${s}</span>`;
-const stSel=o=>`<select class="st" data-k="${esc(o._k)}">${ST.map(s=>`<option ${stOf(o)===s?"selected":""}>${s}</option>`).join("")}</select>`;
+const stSel=o=>D.status?sp(stOf(o)):`<select class="st" data-k="${esc(o._k)}">${ST.map(s=>`<option ${stOf(o)===s?"selected":""}>${s}</option>`).join("")}</select>`;
 const wa=o=>{let d=g(o,D.tel).replace(/\D/g,"");if(d.startsWith("0"))d="92"+d.slice(1);return d};
 
 function render(){
@@ -240,7 +240,7 @@ $("#view").addEventListener("click",e=>{if(e.target.closest("select,a"))return;c
 $("#view").addEventListener("change",e=>{const s=e.target.closest("select.st");if(!s)return;(store[s.dataset.k]=store[s.dataset.k]||{}).s=s.value;save();render()});
 function openM(k){const o=rows.find(x=>x._k===k);if(!o)return;
  $("#md").innerHTML=`<div class="glass mc"><div class="top"><div class="av" style="${av(o[D.name])}">${esc(ini(o[D.name]))}</div><div><h2>${esc(o[D.name])}</h2><p class="sub">${esc([g(o,D.des),g(o,D.org)].filter(Boolean).join(" at "))}</p></div><button class="btn" id="cl" style="margin-left:auto">Close</button></div>
- <div class="grid2">${cols.filter(c=>c!==D.name).map(c=>`<div class="fld"><div class="k">${esc(c)}</div><div class="v">${o[c]?(c===D.int&&!isNaN(o._t)?ft(o._t):esc(o[c])):"—"}</div></div>`).join("")}</div>
+ <div class="grid2">${cols.filter(c=>c!==D.name&&c!==D.status).map(c=>`<div class="fld"><div class="k">${esc(c)}</div><div class="v">${o[c]?(c===D.int&&!isNaN(o._t)?ft(o._t):esc(o[c])):"—"}</div></div>`).join("")}</div>
  <div class="sub">Status</div><div style="margin:6px 0 12px">${stSel(o)}</div><div class="sub">Recruiter notes (saved in this browser)</div><textarea id="nt" placeholder="Add notes about this candidate…">${esc((store[k]||{}).n||"")}</textarea></div>`;
  $("#md").classList.add("open");
  $("#nt").oninput=e=>{(store[k]=store[k]||{}).n=e.target.value;save()};
@@ -250,7 +250,7 @@ const closeM=()=>$("#md").classList.remove("open");
 $("#md").onclick=e=>{if(e.target.id==="md")closeM()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeM()});
 $("#ex").onclick=()=>{const r=filtered(),q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
- const s=[[...cols,"Status","Notes"].map(q).join(",")].concat(r.map(o=>[...cols.map(c=>o[c]),stOf(o),(store[o._k]||{}).n||""].map(q).join(","))).join("\n");
+ const s=[[...cols,...(D.status?[]:["Status"]),"Notes"].map(q).join(",")].concat(r.map(o=>[...cols.map(c=>o[c]),...(D.status?[]:[stOf(o)]),(store[o._k]||{}).n||""].map(q).join(","))).join("\n");
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([s],{type:"text/csv"}));a.download="candidates.csv";a.click()};
 badge(false,"Connecting to Google Sheets…");
 refresh();setInterval(refresh,EVERY);
